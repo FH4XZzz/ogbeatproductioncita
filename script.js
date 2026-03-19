@@ -1122,19 +1122,26 @@ function mostrarConfirmacion(form) {
     
     // 3. Guardar en Supabase (Base de datos real)
     if (supabaseClient) {
-        supabaseClient.from('reservas').insert([
-            {
-                nombre: reserva.nombre,
-                email: reserva.email,
-                telefono: reserva.telefono,
-                servicio: reserva.servicio,
-                fecha: reserva.fecha,
-                hora: reserva.hora,
-                comentarios: reserva.comentarios
+        const datosInsert = {
+            nombre: reserva.nombre,
+            email: reserva.email,
+            telefono: reserva.telefono,
+            servicio: reserva.servicio,
+            fecha: reserva.fecha,
+            hora: reserva.hora,
+            comentarios: reserva.comentarios
+        };
+        
+        console.log('📤 Intentando guardar en Supabase:', datosInsert);
+        
+        supabaseClient.from('reservas').insert([datosInsert])
+        .then(({ data, error }) => {
+            if (error) {
+                console.error('❌ Error detallado de Supabase:', error);
+                alert('Error técnico al sincronizar. La cita se envió por WhatsApp pero no se guardó en el panel.');
+            } else {
+                console.log('✅ Reserva sincronizada con éxito:', data);
             }
-        ]).then(({ error }) => {
-            if (error) console.error('❌ Error guardando en Supabase:', error);
-            else console.log('✅ Reserva sincronizada en la nube');
         });
     }
 
