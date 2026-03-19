@@ -728,11 +728,7 @@ function configurarDisponibilidadFechas() {
             disableMobile: "true",                // Forzar Flatpickr personalizado en móviles en lugar del nativo
             clickOpens: true,
             allowInput: false,                    // Evita que se abra el teclado
-            animate: true,                        // Animaciones suaves
-            static: false,                        // Calendario flotante
-            altInput: true,                       // Input alternativo para mejor UX
-            altFormat: "j \\de F, Y",             // Formato amigable: 19 de Marzo, 2026
-            position: "auto",                     // Posicionamiento automático
+            static: true,                        // Posicionamiento relativo al input para evitar que se pierda en móviles
             monthSelectorType: "static",          // Selector de mes estático para móviles
             
             // Deshabilitar días ocupados
