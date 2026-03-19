@@ -3,8 +3,12 @@
    ========================================== */
 
 // ==========================================
-// 0. CONFIGURACIÓN DE DISPONIBILIDAD
+// 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
+
+const SUPABASE_URL = 'https://yhEirw7Jx5ZJq9dBGdB41Q.supabase.co'; 
+const SUPABASE_KEY = 'sb_publishable_yhEirw7Jx5ZJq9dBGdB41Q_toasJwEx';
+const supabase = (typeof window.supabase !== 'undefined') ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 // Modo de desarrollo (cambiar a false en producción)
 const DEBUG_MODE = false; // MANTENER EN FALSE PARA PRODUCCIÓN
