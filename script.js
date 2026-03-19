@@ -1384,9 +1384,26 @@ function logoutAdmin() {
     document.getElementById('admin-citas').style.display = 'none';
 }
 
-function cargarSolicitudesAdmin() {
+async function cargarSolicitudesAdmin() {
     const lista = document.getElementById('lista-solicitudes');
-    const solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
+    
+    let solicitudes = [];
+    
+    if (supabase) {
+        const { data, error } = await supabase
+            .from('reservas')
+            .select('*')
+            .order('created_at', { ascending: false });
+            
+        if (error) {
+            console.error('❌ Error cargando de Supabase:', error);
+            solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
+        } else {
+            solicitudes = data;
+        }
+    } else {
+        solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
+    }
     
     if (solicitudes.length === 0) {
         lista.innerHTML = '<p style="grid-column: 1/-1; text-align: center;">No hay solicitudes pendientes.</p>';
