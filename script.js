@@ -1340,11 +1340,12 @@ function initIOSGuide() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-    // Desactivar el selector nativo de iOS para que Flatpickr funcione correctamente
+    // Desactivar el selector nativo de iOS y evitar que se abra el teclado
     const fechaInput = document.getElementById('fecha');
     if (fechaInput) {
         fechaInput.setAttribute('type', 'text');
         fechaInput.setAttribute('readonly', 'readonly');
+        fechaInput.setAttribute('inputmode', 'none'); // Evita que se abra el teclado en móviles
     }
 
     if (isIOS && !isStandalone) {
