@@ -1345,10 +1345,6 @@ function initIOSGuide() {
     if (fechaInput) {
         fechaInput.setAttribute('type', 'text');
         fechaInput.setAttribute('readonly', 'readonly');
-        // Asegurar que Flatpickr se reinicialice si es necesario
-        if (typeof fp !== 'undefined') {
-            fp.set('clickOpens', true);
-        }
     }
 
     if (isIOS && !isStandalone) {
