@@ -1116,30 +1116,29 @@ function mostrarConfirmacion(form) {
         console.log('📤 Intentando guardar en Supabase:', datosInsert);
         
         // Usar fetch directo si el cliente SDK falla o es bloqueado
+        console.log('🔗 URL de Supabase:', `${SUPABASE_URL}/rest/v1/reservas`);
+        
         fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_KEY,
                 'Authorization': `Bearer ${SUPABASE_KEY}`,
                 'Content-Type': 'application/json',
-                'Prefer': 'return=representation'
+                'Prefer': 'return=minimal'
             },
             body: JSON.stringify(datosInsert)
         })
-        .then(response => {
-            if (!response.ok) throw new Error('Error en la respuesta de red');
-            return response.json();
-        })
-        .then(data => {
-            console.log('✅ Reserva sincronizada con éxito (Fetch):', data);
+        .then(async response => {
+            const responseText = await response.text();
+            if (!response.ok) {
+                console.error('❌ Error Supabase (HTTP):', response.status, responseText);
+                alert(`Error al guardar cita: ${response.status}. Revisa que la tabla 'reservas' exista en Supabase.`);
+                throw new Error(`HTTP ${response.status}: ${responseText}`);
+            }
+            console.log('✅ Reserva sincronizada con éxito (Fetch)');
         })
         .catch(error => {
-            console.error('❌ Error detallado de Supabase (Fetch):', error);
-            // Fallback al SDK si fetch falla
-            supabaseClient.from('reservas').insert([datosInsert])
-            .then(({ error: sdkError }) => {
-                if (sdkError) console.error('❌ Error SDK Supabase:', sdkError);
-            });
+            console.error('❌ Error Crítico Supabase:', error);
         });
     }
 
