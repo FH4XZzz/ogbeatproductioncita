@@ -1719,7 +1719,7 @@ input.error, select.error {
     .form-group select,
     .form-group textarea {
         padding: 14px 16px;
-        font-size: 16px; /* Evita zoom en iOS */
+        font-size: 16px !important; /* Forzar 16px para evitar zoom automático en iOS al enfocar */
         min-height: 48px;
     }
     
