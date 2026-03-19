@@ -1105,20 +1105,18 @@ function mostrarConfirmacion(form) {
     if (supabaseClient) {
         const datosInsert = {
             nombre: reserva.nombre,
-            email: reserva.email,
-            telefono: reserva.telefono,
-            servicio: reserva.servicio,
+            "Correo electrónico": reserva.email,
+            "teléfono": reserva.telefono,
+            "Servicio": reserva.servicio,
             fecha: reserva.fecha,
             hora: reserva.hora,
-            comentarios: reserva.comentarios
+            "Comentarios": reserva.comentarios
         };
         
         console.log('📤 Intentando guardar en Supabase:', datosInsert);
         
-        // Usar fetch directo si el cliente SDK falla o es bloqueado
-        console.log('🔗 URL de Supabase:', `${SUPABASE_URL}/rest/v1/reservas`);
-        
-        fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
+        // Usar fetch directo a la tabla con el nombre exacto de la imagen
+        fetch(`${SUPABASE_URL}/rest/v1/Producci%C3%B3n%20Ogbeat`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_KEY,
@@ -1434,19 +1432,32 @@ async function cargarSolicitudesAdmin() {
     let solicitudes = [];
     
     if (supabaseClient) {
+        // Consultar SOLO a Supabase para que sea global
         const { data, error } = await supabaseClient
-            .from('reservas')
+            .from('Producción Ogbeat')
             .select('*')
-            .order('created_at', { ascending: false });
+            .order('id', { ascending: false });
             
         if (error) {
             console.error('❌ Error cargando de Supabase:', error);
-            solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
+            lista.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #ff4444;">Error de conexión con la base de datos.</p>';
+            return;
         } else {
-            solicitudes = data;
+            // Mapear los nombres de columnas de Supabase a los nombres usados en el resto del script
+            solicitudes = data.map(item => ({
+                id: item.id,
+                nombre: item.nombre,
+                email: item["Correo electrónico"],
+                telefono: item["teléfono"],
+                servicio: item["Servicio"],
+                fecha: item.fecha,
+                hora: item.hora,
+                comentarios: item["Comentarios"]
+            }));
         }
     } else {
-        solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
+        lista.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #FFD700;">Conectando con la base de datos...</p>';
+        return;
     }
     
     if (solicitudes.length === 0) {
