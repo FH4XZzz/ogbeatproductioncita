@@ -6,17 +6,24 @@
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
 
+// Configuración de Supabase
 const SUPABASE_URL = 'https://yhEirw7Jx5ZJq9dBGdB41Q.supabase.co'; 
 const SUPABASE_KEY = 'sb_publishable_yhEirw7Jx5ZJq9dBGdB41Q_toasJwEx';
 let supabaseClient = null;
 
-// Inicializar Supabase de forma segura
-if (typeof window.supabase !== 'undefined') {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth: {
-            persistSession: false // Evita problemas con el storage/Tracking Prevention
-        }
-    });
+try {
+    if (typeof window.supabase !== 'undefined') {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: {
+                persistSession: false,
+                autoRefreshToken: false,
+                detectSessionInUrl: false
+            }
+        });
+        console.log('⚡ Supabase inicializado correctamente');
+    }
+} catch (e) {
+    console.error('❌ Error al inicializar Supabase:', e);
 }
 
 // Modo de desarrollo (cambiar a false en producción)
@@ -1373,12 +1380,16 @@ function initIOSGuide() {
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-    // Desactivar el selector nativo de iOS y asegurar la apertura de Flatpickr
+    // Desactivar el selector nativo de iOS y asegurar la apertura de Flatpickr sin teclado
     const fechaInput = document.getElementById('fecha');
     if (fechaInput) {
         fechaInput.setAttribute('type', 'text');
-        // Usar click para asegurar que Flatpickr se abra al tocar
-        fechaInput.addEventListener('click', function() {
+        fechaInput.setAttribute('readonly', 'readonly');
+        fechaInput.setAttribute('inputmode', 'none');
+        
+        // Abrir Flatpickr al tocar el contenedor o el input
+        fechaInput.addEventListener('click', function(e) {
+            e.preventDefault();
             if (this._flatpickr) {
                 this._flatpickr.open();
             }
