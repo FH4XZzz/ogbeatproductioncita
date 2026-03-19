@@ -1134,14 +1134,31 @@ function mostrarConfirmacion(form) {
         
         console.log('📤 Intentando guardar en Supabase:', datosInsert);
         
-        supabaseClient.from('reservas').insert([datosInsert])
-        .then(({ data, error }) => {
-            if (error) {
-                console.error('❌ Error detallado de Supabase:', error);
-                alert('Error técnico al sincronizar. La cita se envió por WhatsApp pero no se guardó en el panel.');
-            } else {
-                console.log('✅ Reserva sincronizada con éxito:', data);
-            }
+        // Usar fetch directo si el cliente SDK falla o es bloqueado
+        fetch(`${SUPABASE_URL}/rest/v1/reservas`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(datosInsert)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Error en la respuesta de red');
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ Reserva sincronizada con éxito (Fetch):', data);
+        })
+        .catch(error => {
+            console.error('❌ Error detallado de Supabase (Fetch):', error);
+            // Fallback al SDK si fetch falla
+            supabaseClient.from('reservas').insert([datosInsert])
+            .then(({ error: sdkError }) => {
+                if (sdkError) console.error('❌ Error SDK Supabase:', sdkError);
+            });
         });
     }
 
