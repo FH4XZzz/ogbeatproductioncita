@@ -6,25 +6,9 @@
 // 1. CONFIGURACIÓN Y VARIABLES GLOBALES
 // ==========================================
 
-// Configuración de Supabase
 const SUPABASE_URL = 'https://yhEirw7Jx5ZJq9dBGdB41Q.supabase.co'; 
 const SUPABASE_KEY = 'sb_publishable_yhEirw7Jx5ZJq9dBGdB41Q_toasJwEx';
 let supabaseClient = null;
-
-try {
-    if (typeof window.supabase !== 'undefined') {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: {
-                persistSession: false,
-                autoRefreshToken: false,
-                detectSessionInUrl: false
-            }
-        });
-        console.log('⚡ Supabase inicializado correctamente');
-    }
-} catch (e) {
-    console.error('❌ Error al inicializar Supabase:', e);
-}
 
 // Modo de desarrollo (cambiar a false en producción)
 const DEBUG_MODE = false; // MANTENER EN FALSE PARA PRODUCCIÓN
@@ -725,11 +709,12 @@ function configurarDisponibilidadFechas() {
             dateFormat: 'd/m/Y',                  // Formato DD/MM/YYYY
             locale: 'es',                         // Idioma español
             enableTime: false,                    // Solo fecha, sin hora
-            disableMobile: "true",                // Forzar Flatpickr personalizado en móviles en lugar del nativo
+            disableMobile: "true",
             clickOpens: true,
-            allowInput: false,                    // Evita que se abra el teclado
-            static: true,                        // Posicionamiento relativo al input para evitar que se pierda en móviles
-            monthSelectorType: "static",          // Selector de mes estático para móviles
+            allowInput: false,
+            static: false,
+            appendTo: document.body,
+            monthSelectorType: "static",
             
             // Deshabilitar días ocupados
             disable: [
