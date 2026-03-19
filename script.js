@@ -718,10 +718,11 @@ function configurarDisponibilidadFechas() {
             dateFormat: 'd/m/Y',                  // Formato DD/MM/YYYY
             locale: 'es',                         // Idioma español
             enableTime: false,                    // Solo fecha, sin hora
-            disableMobile: "true",                // Forzar Flatpickr en móviles en lugar del nativo
+            disableMobile: "true",                // Forzar Flatpickr personalizado en móviles en lugar del nativo
+            clickOpens: true,
+            allowInput: false,                    // Evita que se abra el teclado
             animate: true,                        // Animaciones suaves
             static: false,                        // Calendario flotante
-            clickOpens: true,                     // Abre al hacer clic
             altInput: true,                       // Input alternativo para mejor UX
             altFormat: "j \\de F, Y",             // Formato amigable: 19 de Marzo, 2026
             position: "auto",                     // Posicionamiento automático
@@ -1376,8 +1377,12 @@ function initIOSGuide() {
     const fechaInput = document.getElementById('fecha');
     if (fechaInput) {
         fechaInput.setAttribute('type', 'text');
-        fechaInput.setAttribute('readonly', 'readonly');
-        fechaInput.setAttribute('inputmode', 'none'); // Evita que se abra el teclado en móviles
+        // Usar click para abrir Flatpickr explícitamente en móviles si falla la detección automática
+        fechaInput.addEventListener('click', function() {
+            if (this._flatpickr) {
+                this._flatpickr.open();
+            }
+        });
     }
 
     if (isIOS && !isStandalone) {
