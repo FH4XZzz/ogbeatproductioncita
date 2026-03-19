@@ -1103,6 +1103,25 @@ function mostrarConfirmacion(form) {
     // Bloquear el horario de inmediato para evitar que otros lo tomen mientras apruebas
     SISTEMA_DISPONIBILIDAD.agregarReserva(fechaISO, hora, nombre);
     
+    // 3. Guardar en Supabase (Base de datos real)
+    if (supabase) {
+        supabase.from('reservas').insert([
+            {
+                nombre: reserva.nombre,
+                email: reserva.email,
+                telefono: reserva.telefono,
+                servicio: reserva.servicio,
+                fecha: reserva.fecha,
+                hora: reserva.hora,
+                comentarios: reserva.comentarios
+            }
+        ]).then(({ error }) => {
+            if (error) console.error('❌ Error guardando en Supabase:', error);
+            else console.log('✅ Reserva sincronizada en la nube');
+        });
+    }
+
+    // Guardar localmente como respaldo
     // Simular guardado local (localStorage)
     const solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
     solicitudes.push(reserva);
