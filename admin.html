@@ -494,311 +494,309 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <script>
+        // Usar un nombre de variable único para evitar cualquier conflicto con la librería
+        let ogSupabaseClient = null;
+
         (function() {
-            // CONFIGURACIÓN SUPABASE
-            const SUPABASE_URL = 'https://jhsnlrarczlchcghtzqv.supabase.co';
-            const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impoc25scmFyY3psY2hjZ2h0enF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDYyNzgsImV4cCI6MjA4OTUyMjI3OH0.CXtbPIMBUBWgyLLjoU5PIY1eIaljVmHgvhJUQUe_9-E';
-            let supabaseInstance = null;
+            const URL_DB = 'https://jhsnlrarczlchcghtzqv.supabase.co';
+            const KEY_DB = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impoc25scmFyY3psY2hjZ2h0enF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NDYyNzgsImV4cCI6MjA4OTUyMjI3OH0.CXtbPIMBUBWgyLLjoU5PIY1eIaljVmHgvhJUQUe_9-E';
 
-        try {
-            supabaseInstance = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error('Error inicializando Supabase:', e);
-        }
-
-        // CONFIGURACIÓN LOCAL
-        const STORAGE_KEY = 'citasOGBeat';
-        let currentFilter = 'all';
-
-        // UI HELPERS
-        function showLoading(show) {
-            const loader = document.getElementById('loading-overlay');
-            if (loader) loader.style.display = show ? 'flex' : 'none';
-        }
-
-        // LOGIN LOGIC
-        function handleLogin() {
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
-            const error = document.getElementById('login-error');
-
-            if (user === 'admin' && pass === 'ogbeat123') {
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('admin-dashboard').style.display = 'block';
-                init();
-            } else {
-                error.style.display = 'block';
-            }
-        }
-
-        function handleLogout() {
-            location.reload();
-        }
-
-        // CORE DATA LOGIC (SUPABASE + LOCAL FALLBACK)
-        async function getCitas() {
-            if (supabaseInstance) {
-                const { data, error } = await supabaseInstance
-                    .from('ogbeatproduction')
-                    .select('*')
-                    .order('id', { ascending: false });
-                
-                if (!error) {
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                    return data;
+            try {
+                if (window.supabase) {
+                    ogSupabaseClient = window.supabase.createClient(URL_DB, KEY_DB);
                 }
-                console.error('Error Supabase:', error);
+            } catch (e) {
+                console.error('Error inicializando Supabase:', e);
             }
-            return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-        }
 
-        async function saveCitaToSupabase(cita) {
-            if (!supabaseInstance) return false;
-            
-            if (cita.id && !isNaN(cita.id)) {
-                const { data, error } = await supabaseInstance
-                    .from('ogbeatproduction')
-                    .insert([{
-                        nombre: cita.nombre,
-                        email: cita.email || '',
-                        telefono: cita.telefono,
-                        servicio: cita.servicio,
-                        fecha: cita.fecha,
-                        hora: cita.hora,
-                        comentarios: cita.notas || '',
-                        estado: cita.estado || 'pendiente'
-                    }]);
-                return !error;
-            } else {
-                const { error } = await supabaseInstance
-                    .from('ogbeatproduction')
-                    .update({
-                        nombre: cita.nombre,
-                        telefono: cita.telefono,
-                        fecha: cita.fecha,
-                        hora: cita.hora,
-                        servicio: cita.servicio,
-                        comentarios: cita.notas,
-                        estado: cita.estado
-                    })
-                    .eq('id', cita.id);
-                return !error;
+            const STORAGE_KEY = 'citasOGBeat';
+            let currentFilter = 'all';
+
+            function showLoading(show) {
+                const loader = document.getElementById('loading-overlay');
+                if (loader) loader.style.display = show ? 'flex' : 'none';
             }
-        }
 
-        async function init() {
-            showLoading(true);
-            await refreshData();
-            showLoading(false);
-        }
+            function handleLogin() {
+                const user = document.getElementById('user').value;
+                const pass = document.getElementById('pass').value;
+                const error = document.getElementById('login-error');
 
-        async function refreshData() {
-            await updateStats();
-            await renderCitas();
-        }
+                if (user === 'admin' && pass === 'ogbeat123') {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    document.getElementById('admin-dashboard').style.display = 'block';
+                    init();
+                } else {
+                    error.style.display = 'block';
+                }
+            }
 
-        function filterBy(estado, el) {
-            currentFilter = estado;
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            if(el) el.classList.add('active');
-            document.getElementById('filter-estado').value = estado;
-            renderCitas();
-        }
+            function handleLogout() {
+                location.reload();
+            }
 
-        async function updateStats() {
-            const citas = await getCitas();
-            const hoy = new Date().toISOString().split('T')[0];
-            
-            document.getElementById('stat-total').innerText = citas.length;
-            document.getElementById('stat-hoy').innerText = citas.filter(c => c.fecha === hoy).length;
-            document.getElementById('stat-pend').innerText = citas.filter(c => (c.estado || 'pendiente') === 'pendiente').length;
-            
-            const startOfWeek = new Date();
-            startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-            const endOfWeek = new Date();
-            endOfWeek.setDate(endOfWeek.getDate() + (6 - endOfWeek.getDay()));
-            
-            const semanaCount = citas.filter(c => {
-                const f = new Date(c.fecha);
-                return f >= startOfWeek && f <= endOfWeek;
-            }).length;
-            
-            document.getElementById('stat-semana').innerText = semanaCount;
-        }
+            async function getCitas() {
+                if (ogSupabaseClient) {
+                    const { data, error } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .select('*')
+                        .order('id', { ascending: false });
+                    
+                    if (!error) {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                        return data;
+                    }
+                }
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            }
 
-        async function renderCitas() {
-            const citas = await getCitas();
-            const body = document.getElementById('citas-body');
-            const searchInput = document.getElementById('search');
-            const search = searchInput ? searchInput.value.toLowerCase() : '';
-            const estadoFiltro = document.getElementById('filter-estado').value;
-            const desde = document.getElementById('filter-desde').value;
-            const hasta = document.getElementById('filter-hasta').value;
-
-            let filtered = citas.sort((a, b) => {
-                const d1 = new Date(a.fecha + 'T' + a.hora);
-                const d2 = new Date(b.fecha + 'T' + b.hora);
-                return d2 - d1;
-            });
-
-            filtered = filtered.filter(c => {
-                const nombre = c.nombre || '';
-                const tel = c.telefono || '';
-                const estado = c.estado || 'pendiente';
+            async function saveCitaToSupabase(cita) {
+                if (!ogSupabaseClient) return false;
                 
-                const matchSearch = nombre.toLowerCase().includes(search) || tel.includes(search);
-                const matchEstado = estadoFiltro === 'all' || estado === estadoFiltro;
-                const matchDesde = !desde || c.fecha >= desde;
-                const matchHasta = !hasta || c.fecha <= hasta;
-                return matchSearch && matchEstado && matchDesde && matchHasta;
-            });
-
-            body.innerHTML = '';
-            filtered.forEach(c => {
-                const row = document.createElement('tr');
-                const [y, m, d] = c.fecha.split('-');
-                const fechaFormateada = `${d}/${m}/${y}`;
-                const estado = c.estado || 'pendiente';
-
-                row.innerHTML = `
-                    <td>
-                        <div style="font-weight:600">${fechaFormateada}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted)">${c.hora}</div>
-                    </td>
-                    <td>
-                        <div style="font-weight:600">${c.nombre}</div>
-                        <a href="https://wa.me/${c.telefono.replace(/\D/g,'')}" target="_blank" style="color:var(--success); font-size:0.85rem; text-decoration:none">
-                            <small>📱 ${c.telefono}</small>
-                        </a>
-                    </td>
-                    <td>${c.servicio}</td>
-                    <td><span class="badge badge-${estado}">${estado.toUpperCase()}</span></td>
-                    <td style="max-width:150px; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${c.comentarios || c.notas}">${c.comentarios || c.notas || '-'}</td>
-                    <td>
-                        <button class="btn btn-edit" onclick="editCita('${c.id}')" title="Editar">✏️</button>
-                        ${estado === 'pendiente' ? `<button class="btn btn-complete" onclick="changeStatus('${c.id}', 'completada')" title="Completar">✅</button>` : ''}
-                        ${estado === 'pendiente' ? `<button class="btn btn-cancel" onclick="changeStatus('${c.id}', 'cancelada')" title="Cancelar">🚫</button>` : ''}
-                        <button class="btn btn-delete" onclick="deleteCita('${c.id}')" title="Eliminar">🗑️</button>
-                    </td>
-                `;
-                body.appendChild(row);
-            });
-
-            if(filtered.length === 0) {
-                body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted)">No se encontraron citas</td></tr>`;
+                if (cita.id && !isNaN(cita.id)) {
+                    const { data, error } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .insert([{
+                            nombre: cita.nombre,
+                            email: cita.email || '',
+                            telefono: cita.telefono,
+                            servicio: cita.servicio,
+                            fecha: cita.fecha,
+                            hora: cita.hora,
+                            comentarios: cita.notas || '',
+                            estado: cita.estado || 'pendiente'
+                        }]);
+                    return !error;
+                } else {
+                    const { error } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .update({
+                            nombre: cita.nombre,
+                            telefono: cita.telefono,
+                            fecha: cita.fecha,
+                            hora: cita.hora,
+                            servicio: cita.servicio,
+                            comentarios: cita.notas,
+                            estado: cita.estado
+                        })
+                        .eq('id', cita.id);
+                    return !error;
+                }
             }
-        }
 
-        async function deleteCita(id) {
-            if(confirm('¿Estás seguro de eliminar esta cita permanentemente?')) {
+            async function init() {
                 showLoading(true);
-                if (supabaseInstance) {
-                    const { error } = await supabaseInstance.from('ogbeatproduction').delete().eq('id', id);
-                    if (error) showToast('Error al eliminar', 'error');
-                    else showToast('Eliminada correctamente', 'success');
+                await refreshData();
+                showLoading(false);
+            }
+
+            async function refreshData() {
+                await updateStats();
+                await renderCitas();
+            }
+
+            function filterBy(estado, el) {
+                currentFilter = estado;
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                if(el) el.classList.add('active');
+                document.getElementById('filter-estado').value = estado;
+                renderCitas();
+            }
+
+            async function updateStats() {
+                const citas = await getCitas();
+                const hoy = new Date().toISOString().split('T')[0];
+                
+                document.getElementById('stat-total').innerText = citas.length;
+                document.getElementById('stat-hoy').innerText = citas.filter(c => c.fecha === hoy).length;
+                document.getElementById('stat-pend').innerText = citas.filter(c => (c.estado || 'pendiente') === 'pendiente').length;
+                
+                const startOfWeek = new Date();
+                startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                const endOfWeek = new Date();
+                endOfWeek.setDate(endOfWeek.getDate() + (6 - endOfWeek.getDay()));
+                
+                const semanaCount = citas.filter(c => {
+                    const f = new Date(c.fecha);
+                    return f >= startOfWeek && f <= endOfWeek;
+                }).length;
+                
+                document.getElementById('stat-semana').innerText = semanaCount;
+            }
+
+            async function renderCitas() {
+                const citas = await getCitas();
+                const body = document.getElementById('citas-body');
+                const searchInput = document.getElementById('search');
+                const search = searchInput ? searchInput.value.toLowerCase() : '';
+                const estadoFiltro = document.getElementById('filter-estado').value;
+                const desde = document.getElementById('filter-desde').value;
+                const hasta = document.getElementById('filter-hasta').value;
+
+                let filtered = citas.sort((a, b) => {
+                    const d1 = new Date(a.fecha + 'T' + a.hora);
+                    const d2 = new Date(b.fecha + 'T' + b.hora);
+                    return d2 - d1;
+                });
+
+                filtered = filtered.filter(c => {
+                    const nombre = c.nombre || '';
+                    const tel = c.telefono || '';
+                    const estado = c.estado || 'pendiente';
+                    
+                    const matchSearch = nombre.toLowerCase().includes(search) || tel.includes(search);
+                    const matchEstado = estadoFiltro === 'all' || estado === estadoFiltro;
+                    const matchDesde = !desde || c.fecha >= desde;
+                    const matchHasta = !hasta || c.fecha <= hasta;
+                    return matchSearch && matchEstado && matchDesde && matchHasta;
+                });
+
+                body.innerHTML = '';
+                filtered.forEach(c => {
+                    const row = document.createElement('tr');
+                    const [y, m, d] = c.fecha.split('-');
+                    const fechaFormateada = `${d}/${m}/${y}`;
+                    const estado = c.estado || 'pendiente';
+
+                    row.innerHTML = `
+                        <td>
+                            <div style="font-weight:600">${fechaFormateada}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted)">${c.hora}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600">${c.nombre}</div>
+                            <a href="https://wa.me/${c.telefono.replace(/\D/g,'')}" target="_blank" style="color:var(--success); font-size:0.85rem; text-decoration:none">
+                                <small>📱 ${c.telefono}</small>
+                            </a>
+                        </td>
+                        <td>${c.servicio}</td>
+                        <td><span class="badge badge-${estado}">${estado.toUpperCase()}</span></td>
+                        <td style="max-width:150px; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${c.comentarios || c.notas}">${c.comentarios || c.notas || '-'}</td>
+                        <td>
+                            <button class="btn btn-edit" onclick="editCita('${c.id}')" title="Editar">✏️</button>
+                            ${estado === 'pendiente' ? `<button class="btn btn-complete" onclick="changeStatus('${c.id}', 'completada')" title="Completar">✅</button>` : ''}
+                            ${estado === 'pendiente' ? `<button class="btn btn-cancel" onclick="changeStatus('${c.id}', 'cancelada')" title="Cancelar">🚫</button>` : ''}
+                            <button class="btn btn-delete" onclick="deleteCita('${c.id}')" title="Eliminar">🗑️</button>
+                        </td>
+                    `;
+                    body.appendChild(row);
+                });
+
+                if(filtered.length === 0) {
+                    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted)">No se encontraron citas</td></tr>`;
+                }
+            }
+
+            async function deleteCita(id) {
+                if(confirm('¿Estás seguro de eliminar esta cita permanentemente?')) {
+                    showLoading(true);
+                    if (ogSupabaseClient) {
+                        const { error } = await ogSupabaseClient.from('ogbeatproduction').delete().eq('id', id);
+                        if (error) showToast('Error al eliminar', 'error');
+                        else showToast('Eliminada correctamente', 'success');
+                    }
+                    await refreshData();
+                    showLoading(false);
+                }
+            }
+
+            async function changeStatus(id, newStatus) {
+                showLoading(true);
+                if (ogSupabaseClient) {
+                    const { error } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .update({ estado: newStatus })
+                        .eq('id', id);
+                    
+                    if (error) showToast('Error al actualizar', 'error');
+                    else showToast(`Cita ${newStatus}`, 'success');
                 }
                 await refreshData();
                 showLoading(false);
             }
-        }
 
-        async function changeStatus(id, newStatus) {
-            showLoading(true);
-            if (supabaseInstance) {
-                const { error } = await supabaseInstance
-                    .from('ogbeatproduction')
-                    .update({ estado: newStatus })
-                    .eq('id', id);
-                
-                if (error) showToast('Error al actualizar', 'error');
-                else showToast(`Cita ${newStatus}`, 'success');
-            }
-            await refreshData();
-            showLoading(false);
-        }
-
-        function openModal() {
-            document.getElementById('edit-id').value = '';
-            document.getElementById('modal-title').innerText = 'Nueva Cita';
-            document.getElementById('f-nombre').value = '';
-            document.getElementById('f-tel').value = '';
-            document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
-            document.getElementById('f-hora').value = '10:00';
-            document.getElementById('f-servicio').value = 'Grabación Profesional';
-            document.getElementById('f-notas').value = '';
-            document.getElementById('modal-overlay').style.display = 'flex';
-        }
-
-        async function editCita(id) {
-            const citas = await getCitas();
-            const cita = citas.find(c => c.id.toString() === id.toString());
-            if(!cita) return;
-
-            document.getElementById('edit-id').value = cita.id;
-            document.getElementById('modal-title').innerText = 'Editar Cita';
-            document.getElementById('f-nombre').value = cita.nombre;
-            document.getElementById('f-tel').value = cita.telefono;
-            document.getElementById('f-fecha').value = cita.fecha;
-            document.getElementById('f-hora').value = cita.hora;
-            document.getElementById('f-servicio').value = cita.servicio;
-            document.getElementById('f-notas').value = cita.comentarios || cita.notas || '';
-            document.getElementById('modal-overlay').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('modal-overlay').style.display = 'none';
-        }
-
-        async function saveCita() {
-            const id = document.getElementById('edit-id').value;
-            const nueva = {
-                id: id || Date.now().toString(),
-                nombre: document.getElementById('f-nombre').value,
-                telefono: document.getElementById('f-tel').value,
-                fecha: document.getElementById('f-fecha').value,
-                hora: document.getElementById('f-hora').value,
-                servicio: document.getElementById('f-servicio').value,
-                notas: document.getElementById('f-notas').value,
-                estado: 'pendiente'
-            };
-
-            if(!nueva.nombre || !nueva.telefono || !nueva.fecha || !nueva.hora) {
-                showToast('Completa los campos obligatorios', 'error');
-                return;
+            function openModal() {
+                document.getElementById('edit-id').value = '';
+                document.getElementById('modal-title').innerText = 'Nueva Cita';
+                document.getElementById('f-nombre').value = '';
+                document.getElementById('f-tel').value = '';
+                document.getElementById('f-fecha').value = new Date().toISOString().split('T')[0];
+                document.getElementById('f-hora').value = '10:00';
+                document.getElementById('f-servicio').value = 'Grabación Profesional';
+                document.getElementById('f-notas').value = '';
+                document.getElementById('modal-overlay').style.display = 'flex';
             }
 
-            showLoading(true);
-            const success = await saveCitaToSupabase(nueva);
-            if (success) {
-                showToast('Guardado correctamente', 'success');
-                closeModal();
-                await refreshData();
-            } else {
-                showToast('Error al sincronizar', 'error');
+            async function editCita(id) {
+                const citas = await getCitas();
+                const cita = citas.find(c => c.id.toString() === id.toString());
+                if(!cita) return;
+
+                document.getElementById('edit-id').value = cita.id;
+                document.getElementById('modal-title').innerText = 'Editar Cita';
+                document.getElementById('f-nombre').value = cita.nombre;
+                document.getElementById('f-tel').value = cita.telefono;
+                document.getElementById('f-fecha').value = cita.fecha;
+                document.getElementById('f-hora').value = cita.hora;
+                document.getElementById('f-servicio').value = cita.servicio;
+                document.getElementById('f-notas').value = cita.comentarios || cita.notas || '';
+                document.getElementById('modal-overlay').style.display = 'flex';
             }
-            showLoading(false);
-        }
 
-        function showToast(msg, type) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            t.innerText = msg;
-            t.className = type === 'success' ? 'toast-success show' : 'toast-error show';
-            setTimeout(() => t.classList.remove('show'), 3000);
-        }
+            function closeModal() {
+                document.getElementById('modal-overlay').style.display = 'none';
+            }
 
-        // Hacer funciones globales
-        window.handleLogin = handleLogin;
-        window.handleLogout = handleLogout;
-        window.filterBy = filterBy;
-        window.renderCitas = renderCitas;
-        window.editCita = editCita;
-        window.changeStatus = changeStatus;
-        window.deleteCita = deleteCita;
-        window.openModal = openModal;
-        window.closeModal = closeModal;
-        window.saveCita = saveCita;
-    })();
-</script>
+            async function saveCita() {
+                const id = document.getElementById('edit-id').value;
+                const nueva = {
+                    id: id || Date.now().toString(),
+                    nombre: document.getElementById('f-nombre').value,
+                    telefono: document.getElementById('f-tel').value,
+                    fecha: document.getElementById('f-fecha').value,
+                    hora: document.getElementById('f-hora').value,
+                    servicio: document.getElementById('f-servicio').value,
+                    notas: document.getElementById('f-notas').value,
+                    estado: 'pendiente'
+                };
+
+                if(!nueva.nombre || !nueva.telefono || !nueva.fecha || !nueva.hora) {
+                    showToast('Completa los campos obligatorios', 'error');
+                    return;
+                }
+
+                showLoading(true);
+                const success = await saveCitaToSupabase(nueva);
+                if (success) {
+                    showToast('Guardado correctamente', 'success');
+                    closeModal();
+                    await refreshData();
+                } else {
+                    showToast('Error al sincronizar', 'error');
+                }
+                showLoading(false);
+            }
+
+            function showToast(msg, type) {
+                const t = document.getElementById('toast');
+                if (!t) return;
+                t.innerText = msg;
+                t.className = type === 'success' ? 'toast-success show' : 'toast-error show';
+                setTimeout(() => t.classList.remove('show'), 3000);
+            }
+
+            // Exportar funciones al objeto global window
+            window.handleLogin = handleLogin;
+            window.handleLogout = handleLogout;
+            window.filterBy = filterBy;
+            window.renderCitas = renderCitas;
+            window.editCita = editCita;
+            window.changeStatus = changeStatus;
+            window.deleteCita = deleteCita;
+            window.openModal = openModal;
+            window.closeModal = closeModal;
+            window.saveCita = saveCita;
+        })();
+    </script>
 </body>
 </html>
