@@ -586,6 +586,8 @@
 
             async function init() {
                 showLoading(true);
+                // Forzar el filtro de 'pendiente' al inicio
+                currentFilter = 'pendiente';
                 await refreshData();
                 showLoading(false);
             }
