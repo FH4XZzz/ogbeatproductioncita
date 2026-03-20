@@ -11,7 +11,7 @@ const SUPABASE_KEY = 'sb_publishable_yhEirw7Jx5ZJq9dBGdB41Q_toasJwEx';
 let supabaseClient = null;
 
 // Modo de desarrollo (cambiar a false en producción)
-const DEBUG_MODE = false; // MANTENER EN FALSE PARA PRODUCCIÓN
+const DEBUG_MODE = true; // ACTIVADO TEMPORALMENTE PARA DEPURACIÓN
 
 /**
  * Sistema inteligente de disponibilidad tipo Airbnb/Booking
@@ -1589,14 +1589,13 @@ window.addEventListener('error', function(event) {
 
 // Eliminar logs de branding en producción
 if (!DEBUG_MODE) {
-    // Limpiar consola para producción
-    console.clear();
+    // console.clear(); // Comentado para ver errores
     
     // Sobreescribir console.log para evitar logs no deseados
     const originalLog = console.log;
     console.log = function(...args) {
-        // Permitir solo logs de errores críticos
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('❌')) {
+        // Permitir logs que contengan iconos de estado
+        if (args[0] && typeof args[0] === 'string' && (args[0].includes('❌') || args[0].includes('✅') || args[0].includes('⚡') || args[0].includes('📤'))) {
             originalLog.apply(console, args);
         }
     };
