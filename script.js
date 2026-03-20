@@ -227,6 +227,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // 💾 CARGAR RESERVAS GUARDADAS EN EL NAVEGADOR
     SISTEMA_DISPONIBILIDAD.cargarDelLocalStorage();
     
+    // Sincronizar con la clave del nuevo panel admin profesional
+    const syncCitas = () => {
+        const citasOGBeat = JSON.parse(localStorage.getItem('citasOGBeat')) || [];
+        const seatStudio = JSON.parse(localStorage.getItem('seatStudioReservas')) || { reservas: [] };
+        
+        // Convertir citasOGBeat a formato seatStudio si no existen
+        citasOGBeat.forEach(cita => {
+            const existe = seatStudio.reservas.some(r => r.fecha === cita.fecha && r.horaInicio === cita.hora);
+            if (!existe && cita.estado !== 'cancelada') {
+                SISTEMA_DISPONIBILIDAD.agregarReserva(cita.fecha, cita.hora, cita.nombre);
+            }
+        });
+    };
+    syncCitas();
+    
     // Inicializar componentes
     initNavigation();
     initScrollAnimations();
@@ -1146,6 +1161,20 @@ function mostrarConfirmacion(form) {
     const solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
     solicitudes.push(reserva);
     localStorage.setItem('solicitudes_reservas', JSON.stringify(solicitudes));
+
+    // SINCRONIZAR CON EL NUEVO PANEL PROFESIONAL (admin.html)
+    const citasAdmin = JSON.parse(localStorage.getItem('citasOGBeat')) || [];
+    citasAdmin.push({
+        id: reserva.id.toString(),
+        fecha: reserva.fecha, // YYYY-MM-DD
+        hora: reserva.hora,
+        nombre: reserva.nombre,
+        telefono: reserva.telefono,
+        servicio: reserva.servicio,
+        estado: 'pendiente',
+        notas: reserva.comentarios
+    });
+    localStorage.setItem('citasOGBeat', JSON.stringify(citasAdmin));
 
     // Actualizar mensaje de confirmación (solo si los elementos existen)
     const emailConfirmado = document.getElementById('emailConfirmado');

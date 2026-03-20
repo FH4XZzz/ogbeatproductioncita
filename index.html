@@ -492,33 +492,15 @@
         <i class="fab fa-whatsapp"></i>
     </a>
 
-    <!-- Administración de Citas (Oculto por defecto) -->
-    <section id="admin-citas" style="display: none; padding: 100px 0; background: var(--color-bg);">
-        <div class="container">
-            <h2 class="section-title">Panel de Administración</h2>
-            <div id="admin-login" style="max-width: 400px; margin: 0 auto; text-align: center; background: var(--color-bg-secondary); padding: 30px; border-radius: 15px; border: 1px solid var(--color-primary);">
-                <h3>Acceso Restringido</h3>
-                <input type="password" id="admin-pass" placeholder="Contraseña" style="width: 100%; padding: 12px; margin: 20px 0; background: var(--color-bg); border: 1px solid var(--color-border); color: white; border-radius: 8px;">
-                <button onclick="loginAdmin()" class="btn btn-primary" style="width: 100%;">Entrar</button>
-            </div>
-            <div id="admin-panel" style="display: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-                    <h3>Solicitudes Pendientes</h3>
-                    <button onclick="logoutAdmin()" class="btn btn-secondary" style="padding: 8px 20px; font-size: 12px;">Cerrar Sesión</button>
-                </div>
-                <div id="lista-solicitudes" class="contacto-grid" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
-                    <!-- Las solicitudes se cargarán aquí dinámicamente -->
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- Administración de Citas (Eliminado) -->
+
 
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
                 <p>&copy; 2026 OG BEAT PRODUCTION. Todos los derechos reservados.</p>
-                <p>Diseñado con <i class="fas fa-heart" id="admin-trigger" onclick="abrirAdmin()" style="cursor: pointer; transition: transform 0.3s ease;" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></i> para artistas apasionados</p>
+                <p>Diseñado para artistas apasionados</p>
             </div>
         </div>
     </footer>
