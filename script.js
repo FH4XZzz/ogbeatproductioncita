@@ -1514,26 +1514,39 @@ async function cargarSolicitudesAdmin() {
     });
 }
 
-function gestionarCita(id, accion) {
-    let solicitudes = JSON.parse(localStorage.getItem('solicitudes_reservas') || '[]');
-    const reservaIndex = solicitudes.findIndex(r => r.id === id);
-    
-    if (reservaIndex === -1) return;
-    const reserva = solicitudes[reservaIndex];
-    
-    if (accion === 'aceptar') {
-        alert(`Cita de ${reserva.nombre} aceptada. Ya está bloqueada en tu calendario.`);
-    } else if (accion === 'rechazar') {
-        // LIBERAR EL HORARIO EN EL SISTEMA
-        SISTEMA_DISPONIBILIDAD.quitarReserva(reserva.fecha, reserva.hora);
-        SISTEMA_DISPONIBILIDAD.guardarEnLocalStorage();
-        alert(`Cita de ${reserva.nombre} rechazada. El horario ${reserva.hora} vuelve a estar disponible.`);
+async function gestionarCita(id, accion) {
+    if (!supabaseClient) {
+        alert('Error: No hay conexión con la base de datos.');
+        return;
     }
-    
-    // Eliminar de la lista de solicitudes pendientes
-    solicitudes.splice(reservaIndex, 1);
-    localStorage.setItem('solicitudes_reservas', JSON.stringify(solicitudes));
-    cargarSolicitudesAdmin();
+
+    try {
+        if (accion === 'aceptar') {
+            // En Supabase podrías tener una columna 'estado'
+            const { error } = await supabaseClient
+                .from('ogbeatproduction')
+                .update({ estado: 'aceptada' })
+                .eq('id', id);
+
+            if (error) throw error;
+            alert('Cita aceptada correctamente.');
+        } else if (accion === 'rechazar') {
+            // Eliminar de Supabase
+            const { error } = await supabaseClient
+                .from('ogbeatproduction')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            alert('Cita rechazada y eliminada.');
+        }
+
+        // Recargar la lista
+        cargarSolicitudesAdmin();
+    } catch (error) {
+        console.error('❌ Error al gestionar cita:', error);
+        alert('Error al procesar la acción. Revisa la consola.');
+    }
 }
 
 // Hacer funciones globales para onclick
