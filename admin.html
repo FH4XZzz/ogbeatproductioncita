@@ -355,12 +355,37 @@
         /* RESPONSIVE */
         @media (max-width: 768px) {
             .sidebar {
-                width: 70px;
-                padding: 1rem 0.5rem;
+                width: 100%;
+                height: auto;
+                position: relative;
+                border-right: none;
+                border-bottom: 1px solid var(--border);
             }
-            .sidebar-brand, .nav-link span { display: none; }
-            .main-content { margin-left: 70px; padding: 1rem; }
-            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .sidebar-brand { margin-bottom: 1rem; }
+            .nav-list { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+            .nav-item { margin-bottom: 0; }
+            .nav-link span { display: inline; font-size: 0.8rem; }
+            .main-content { margin-left: 0; padding: 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+            .stat-card { padding: 1rem; }
+            .stat-value { font-size: 1.5rem; }
+            
+            /* Tablas en móvil */
+            table, thead, tbody, th, td, tr { display: block; }
+            thead tr { position: absolute; top: -9999px; left: -9999px; }
+            tr { border: 1px solid var(--border); border-radius: 0.5rem; margin-bottom: 1rem; background: var(--bg-card); }
+            td { border: none; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; padding-left: 40%; }
+            td:before { position: absolute; left: 1rem; width: 35%; white-space: nowrap; color: var(--text-muted); font-size: 0.75rem; font-weight: bold; }
+            td:nth-of-type(1):before { content: "FECHA"; }
+            td:nth-of-type(2):before { content: "CLIENTE"; }
+            td:nth-of-type(3):before { content: "SERVICIO"; }
+            td:nth-of-type(4):before { content: "ESTADO"; }
+            td:nth-of-type(5):before { content: "NOTAS"; }
+            td:nth-of-type(6):before { content: "ACCIONES"; }
+            td:last-child { border-bottom: none; padding-left: 1rem; text-align: center; }
+            
+            .controls-row { flex-direction: column; }
+            .form-input { max-width: 100% !important; }
         }
     </style>
 </head>
@@ -637,7 +662,7 @@
                 const body = document.getElementById('citas-body');
                 const searchInput = document.getElementById('search');
                 const search = searchInput ? searchInput.value.toLowerCase() : '';
-                const estadoFiltro = document.getElementById('filter-estado').value;
+                const estadoFiltro = currentFilter; // Usar el filtro global
                 const desde = document.getElementById('filter-desde').value;
                 const hasta = document.getElementById('filter-hasta').value;
 
@@ -653,7 +678,15 @@
                     const estado = c.estado || 'pendiente';
                     
                     const matchSearch = nombre.toLowerCase().includes(search) || tel.includes(search);
-                    const matchEstado = estadoFiltro === 'all' || estado === estadoFiltro;
+                    
+                    // Lógica de filtrado estricta para que desaparezcan de 'pendientes'
+                    let matchEstado = false;
+                    if (estadoFiltro === 'all') {
+                        matchEstado = true;
+                    } else {
+                        matchEstado = (estado === estadoFiltro);
+                    }
+
                     const matchDesde = !desde || c.fecha >= desde;
                     const matchHasta = !hasta || c.fecha <= hasta;
                     return matchSearch && matchEstado && matchDesde && matchHasta;
