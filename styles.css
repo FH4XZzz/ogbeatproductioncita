@@ -420,7 +420,25 @@ section {
     font-size: 18px;
 }
 
-/* Gráfico del Hero */
+/* Media queries para dispositivos móviles y DPIs altos */
+@media (max-width: 768px) {
+    .formulario-reserva {
+        padding: 25px 15px;
+    }
+    
+    .form-row {
+        gap: 15px;
+    }
+    
+    .form-group {
+        flex: 1 1 100%; /* En móviles pequeños, cada campo ocupa toda la fila */
+    }
+
+    .info-disponibilidad {
+        font-size: 13px;
+        padding: 15px;
+    }
+}
 .hero-graphic {
     display: flex;
     justify-content: center;
@@ -896,11 +914,14 @@ section {
 
 .reserva {
     background: linear-gradient(135deg, var(--color-bg-secondary) 0%, var(--color-bg) 100%);
+    width: 100%;
+    overflow: hidden;
 }
 
 .reserva-container {
-    max-width: 700px;
+    max-width: 900px; /* Aumentado un poco para dar más aire */
     margin: 0 auto;
+    width: 100%;
 }
 
 .formulario-reserva {
@@ -909,11 +930,12 @@ section {
     border-radius: 15px;
     padding: 40px;
     animation: slideInUp 0.8s ease;
+    width: 100%;
 }
 
 .form-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    display: flex;
+    flex-wrap: wrap; /* Permite que los elementos bajen si no hay espacio */
     gap: 25px;
     margin-bottom: 25px;
 }
@@ -922,6 +944,16 @@ section {
     display: flex;
     flex-direction: column;
     position: relative;
+    flex: 1 1 300px; /* Se expande pero baja si mide menos de 300px */
+    min-width: 0; /* Evita que el contenido rompa el flexbox */
+}
+
+/* Ajuste específico para que el select no se desborde */
+.form-group select, 
+.form-group input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .form-group label {
