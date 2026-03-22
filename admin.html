@@ -780,8 +780,32 @@
                 lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
             }, { passive: true });
 
+            async function diagnoseSchema() {
+                if (!ogSupabaseClient) return;
+                console.log('🔍 INICIANDO DIAGNÓSTICO DE SCHEMA...');
+                
+                // 1. Intentar leer de la tabla 'ogbeatproduction'
+                const { data: d1, error: e1 } = await ogSupabaseClient.from('ogbeatproduction').select('*').limit(1);
+                console.log('Prueba ogbeatproduction:', { success: !e1, error: e1, data: d1 });
+
+                // 2. Intentar leer de la tabla 'Producción Ogbeat' (exacto como la imagen)
+                const { data: d2, error: e2 } = await ogSupabaseClient.from('Producción Ogbeat').select('*').limit(1);
+                console.log('Prueba Producción Ogbeat:', { success: !e2, error: e2, data: d2 });
+
+                // 3. Ver columnas de la que funcione
+                if (d1 || d2) {
+                    const workingTable = d1 ? 'ogbeatproduction' : 'Producción Ogbeat';
+                    const data = d1 || d2;
+                    console.log(`✅ Tabla encontrada: ${workingTable}`);
+                    console.log('Campos reales en el primer registro:', Object.keys(data[0] || {}));
+                }
+            }
+
             async function init() {
                 showLoading(true);
+                // Diagnóstico inicial
+                if (DEBUG_MODE) await diagnoseSchema();
+                
                 // Forzar el filtro de 'pendiente' al inicio
                 currentFilter = 'pendiente';
                 await refreshData();
