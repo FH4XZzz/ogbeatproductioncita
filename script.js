@@ -641,38 +641,38 @@ function validarFormulario() {
     
     // Validación con feedback visual
     if (!nombre) {
-        mostrarError('errorNombre', 'Por favor ingresa tu nombre');
+        mostrarError('Nombre', 'Por favor ingresa tu nombre');
         isValid = false;
     } else if (nombre.length < 3) {
-        mostrarError('errorNombre', 'El nombre debe tener al menos 3 caracteres');
+        mostrarError('Nombre', 'El nombre debe tener al menos 3 caracteres');
         isValid = false;
     }
     
     if (email && !validarEmail(email)) {
-        mostrarError('errorEmail', 'Por favor ingresa un email válido');
+        mostrarError('Email', 'Por favor ingresa un email válido');
         isValid = false;
     }
     
     if (!telefono) {
-        mostrarError('errorTelefono', 'Por favor ingresa tu teléfono');
+        mostrarError('Telefono', 'Por favor ingresa tu teléfono');
         isValid = false;
     } else if (!validarTelefono(telefono)) {
-        mostrarError('errorTelefono', 'Por favor ingresa un teléfono válido');
+        mostrarError('Telefono', 'Por favor ingresa un teléfono válido');
         isValid = false;
     }
     
     if (!servicio) {
-        mostrarError('errorServicio', 'Por favor selecciona un servicio');
+        mostrarError('Servicio', 'Por favor selecciona un servicio');
         isValid = false;
     }
     
     if (!fecha) {
-        mostrarError('errorFecha', 'Por favor selecciona una fecha');
+        mostrarError('Fecha', 'Por favor selecciona una fecha');
         isValid = false;
     }
     
     if (!hora) {
-        mostrarError('errorHora', 'Por favor selecciona una hora');
+        mostrarError('Hora', 'Por favor selecciona una hora');
         isValid = false;
     }
     
@@ -682,19 +682,14 @@ function validarFormulario() {
 /**
  * Mostrar error con feedback visual
  */
-function mostrarError(id, mensaje) {
-    const errorElement = document.getElementById(id);
-    const inputElement = errorElement.previousElementSibling;
-    
-    errorElement.textContent = mensaje;
-    errorElement.style.display = 'block';
-    inputElement.classList.add('error');
-    
-    // Quitar error después de 3 segundos
-    setTimeout(() => {
-        errorElement.style.display = 'none';
-        inputElement.classList.remove('error');
-    }, 3000);
+function mostrarError(campo, mensaje) {
+    const errorElement = document.getElementById('error' + campo.charAt(0).toUpperCase() + campo.slice(1));
+    if (errorElement) {
+        errorElement.textContent = mensaje;
+        errorElement.style.display = 'block';
+        const inputElement = errorElement.previousElementSibling;
+        if (inputElement) inputElement.classList.add('error');
+    }
 }
 
 /**
@@ -860,8 +855,13 @@ function actualizarHorariosDisponibles(fechaSeleccionada) {
     // Obtener horarios para el día seleccionado
     const horarios = SISTEMA_DISPONIBILIDAD.getHorariosParaDia(fechaSeleccionada);
     
-    // Obtener horas ocupadas de este día (que bloquean 2 horas cada una)
+    // Obtener horas ocupadas de este día (que bloquea 2 horas cada una)
+    // Forzamos la obtención de horas ocupadas cargando desde localStorage primero
+    SISTEMA_DISPONIBILIDAD.cargarDelLocalStorage();
     const horasOcupadas = SISTEMA_DISPONIBILIDAD.getHorasOcupadas(fechaISO);
+    
+    // Log de depuración para ver qué está pasando con las horas ocupadas
+    console.log(`🔍 Depurando horas para ${fechaISO}:`, horasOcupadas);
     
     // Guardar opción seleccionada actual (si existe)
     const horaActual = selectHora.value;
