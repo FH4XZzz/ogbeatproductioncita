@@ -911,7 +911,16 @@
                 
                 try {
                     if (ogSupabaseClient) {
-                        // 1. Actualizar estado REAL en la base de datos inmediatamente
+                        // 1. Obtener datos actuales
+                        const { data: currentData, error: fetchError } = await ogSupabaseClient
+                            .from('ogbeatproduction')
+                            .select('*')
+                            .eq('id', id)
+                            .single();
+
+                        if (fetchError) throw fetchError;
+
+                        // 2. Actualizar estado REAL en la base de datos
                         const { error: updateError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .update({ estado: newStatus })
@@ -919,38 +928,34 @@
                         
                         if (updateError) throw updateError;
                         
-                        if (DEBUG_MODE) console.log('✅ Estado actualizado en Supabase exitosamente');
                         showToast(`Cita ${newStatus === 'completada' ? 'APROBADA' : 'CANCELADA'}`, 'success');
                         
-                        // 2. LIMPIEZA TOTAL DE CACHÉ Y RE-RENDER INMEDIATO
+                        // 3. LIMPIEZA TOTAL DE CACHÉ Y RECARGA FORZADA
                         localStorage.removeItem(STORAGE_KEY); 
                         
-                        // 3. Obtener datos frescos para la UI ANTES de cualquier otra acción
-                        const freshCitas = await getCitas(); 
-                        const citaActualizada = freshCitas.find(c => c.id == id);
-                        
-                        // Forzar renderizado
+                        // Forzamos la descarga de datos frescos y el renderizado completo
+                        await getCitas(true); 
                         await renderCitas(); 
                         await updateStats();
 
                         // 4. Acciones automáticas (WhatsApp)
-                        if (citaActualizada) {
-                            const [y, m, d] = citaActualizada.fecha.split('-');
+                        if (currentData) {
+                            const [y, m, d] = currentData.fecha.split('-');
                             const fechaFormateada = `${d}/${m}/${y}`;
                             let mensaje = '';
                             
                             if (newStatus === 'completada') {
-                                mensaje = `¡Hola ${citaActualizada.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${citaActualizada.hora}. 📀 ¡Vamos a crear magia!`;
+                                mensaje = `¡Hola ${currentData.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${currentData.hora}. 📀 ¡Vamos a crear magia!`;
                             } else if (newStatus === 'cancelada') {
-                                mensaje = `Hola ${citaActualizada.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
+                                mensaje = `Hola ${currentData.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
                             }
 
                             if (mensaje) {
-                                const waUrl = `https://wa.me/${citaActualizada.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
-                                // Delay mayor para asegurar que el usuario vea el cambio en la lista
+                                const waUrl = `https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
+                                // Delay para asegurar que el usuario vea la desaparición de la tarjeta
                                 setTimeout(() => {
                                     window.open(waUrl, '_blank');
-                                }, 1000);
+                                }, 800);
                             }
                         }
                     }
