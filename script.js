@@ -485,21 +485,29 @@ function initFormValidation() {
                     });
                 }
 
-                // Enviar a Supabase (si está configurado)
+                // Enviar a Supabase
                 if (window.supabaseInstance) {
-                    const { error } = await window.supabaseInstance
-                        .from('ogbeatproduction')
-                        .insert([{
-                            nombre: datos.nombre,
-                            email: datos.email,
-                            telefono: datos.telefono,
-                            servicio: datos.servicio,
-                            fecha: fechaISO,
-                            hora: datos.hora,
-                            comentarios: datos.comentarios,
-                            estado: 'pendiente'
-                        }]);
-                    if (error) throw error;
+                    try {
+                        const { error } = await window.supabaseInstance
+                            .from('ogbeatproduction')
+                            .insert([{
+                                nombre: datos.nombre,
+                                email: datos.email,
+                                telefono: datos.telefono,
+                                servicio: datos.servicio,
+                                fecha: fechaISO,
+                                hora: datos.hora,
+                                comentarios: datos.comentarios,
+                                estado: 'pendiente'
+                            }]);
+                        
+                        if (error) throw error;
+                        if (DEBUG_MODE) console.log('✅ Reserva guardada en Supabase');
+                    } catch (error) {
+                        console.error('Error al guardar reserva en Supabase:', error);
+                        alert('Hubo un error al procesar tu solicitud. Inténtalo de nuevo más tarde.');
+                        return;
+                    }
                 }
 
                 ultimoEnvio = Date.now();
@@ -514,6 +522,40 @@ function initFormValidation() {
             }
         }
     });
+}
+
+/**
+ * Muestra el mensaje de confirmación después de un envío exitoso
+ */
+function mostrarConfirmacion(form, datos) {
+    const confirmacion = document.getElementById('confirmacionMensaje');
+    const emailConfirmado = document.getElementById('emailConfirmado');
+    const telefonoConfirmado = document.getElementById('telefonoConfirmado');
+    
+    if (confirmacion) {
+        if (emailConfirmado) emailConfirmado.textContent = datos.email || 'No proporcionado';
+        if (telefonoConfirmado) telefonoConfirmado.textContent = datos.telefono;
+        
+        form.style.display = 'none';
+        confirmacion.style.display = 'block';
+        confirmacion.scrollIntoView({ behavior: 'smooth' });
+        
+        // Enviar mensaje a WhatsApp (solo si no es manual)
+        enviarNotificacionWhatsApp(datos);
+    }
+}
+
+/**
+ * Envía notificación por WhatsApp al usuario (opcional o informativo)
+ */
+function enviarNotificacionWhatsApp(reserva) {
+    const [y, m, d] = reserva.fecha_iso ? reserva.fecha_iso.split('-') : ['', '', ''];
+    const fechaFormateada = reserva.fecha || `${d}/${m}/${y}`;
+    
+    const mensaje = `📀 SOLICITUD DE CITA - OG BEAT\n\nHola ${reserva.nombre}, recibimos tu solicitud para el ${fechaFormateada} a las ${reserva.hora}. Tu estado actual es: PENDIENTE. Te confirmaremos por aquí en breve.`;
+    
+    const waUrl = `https://wa.me/18297694405?text=${encodeURIComponent(mensaje)}`;
+    window.open(waUrl, '_blank');
 }
 
 /**
