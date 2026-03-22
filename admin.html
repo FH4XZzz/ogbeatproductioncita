@@ -769,20 +769,21 @@
             checkBiometrics();
 
             async function refreshData() {
+                if (DEBUG_MODE) console.log('🔄 Ejecutando refresco total de datos...');
                 await updateStats();
                 await renderCitas();
             }
 
             function filterBy(estado, el) {
                 currentFilter = estado;
+                if (DEBUG_MODE) console.log(`🎯 Filtro cambiado a: ${currentFilter}`);
+                
                 document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 if(el) el.classList.add('active');
                 
-                // Actualizar el valor del select de estado para que coincida con el filtro lateral
+                // Sincronizar el select si existe
                 const selectEstado = document.getElementById('filter-estado');
-                if (selectEstado) {
-                    selectEstado.value = estado;
-                }
+                if (selectEstado) selectEstado.value = estado;
                 
                 renderCitas();
             }
@@ -910,11 +911,11 @@
                 if (!id) return;
                 
                 showLoading(true);
-                if (DEBUG_MODE) console.log(`🔄 Iniciando cambio de estado para ID: ${id} a ${newStatus}`);
+                if (DEBUG_MODE) console.log(`� Solicitando cambio a "${newStatus}" para ID: ${id}`);
                 
                 try {
                     if (ogSupabaseClient) {
-                        // 1. Obtener datos actuales de la cita ANTES de actualizar
+                        // 1. Obtener datos actuales
                         const { data: currentData, error: fetchError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .select('*')
@@ -922,9 +923,8 @@
                             .single();
 
                         if (fetchError) throw fetchError;
-                        if (DEBUG_MODE) console.log('📦 Datos de la cita encontrados:', currentData);
 
-                        // 2. Actualizar estado en Supabase
+                        // 2. Actualizar estado REAL en la base de datos
                         const { error: updateError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .update({ estado: newStatus })
@@ -932,21 +932,11 @@
                         
                         if (updateError) throw updateError;
                         
-                        if (DEBUG_MODE) console.log('✅ Estado actualizado en Supabase exitosamente');
-                        showToast(`Cita marcada como ${newStatus.toUpperCase()}`, 'success');
+                        showToast(`Cita ${newStatus === 'completada' ? 'APROBADA' : 'CANCELADA'}`, 'success');
                         
-                        // 3. ACTUALIZACIÓN CRÍTICA: Limpiar caché local y forzar renderizado inmediato
-                        // Obtenemos los datos frescos de la DB
-                        const { data: freshData } = await ogSupabaseClient
-                            .from('ogbeatproduction')
-                            .select('*')
-                            .order('id', { ascending: false });
-                        
-                        if (freshData) {
-                            localStorage.setItem(STORAGE_KEY, JSON.stringify(freshData));
-                            await renderCitas(); // Volver a renderizar la tabla con los datos nuevos
-                            await updateStats(); // Actualizar contadores
-                        }
+                        // 3. LIMPIEZA TOTAL DE CACHÉ Y RE-RENDER
+                        localStorage.removeItem(STORAGE_KEY); 
+                        await refreshData(); 
 
                         // 4. Acciones automáticas (WhatsApp)
                         if (currentData) {
@@ -961,22 +951,14 @@
                             }
 
                             if (mensaje) {
-                                if (DEBUG_MODE) console.log('📱 Abriendo WhatsApp con mensaje:', mensaje);
                                 const waUrl = `https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
-                                
-                                // Delay para que el usuario vea el cambio en la lista antes de irse a WhatsApp
-                                setTimeout(() => {
-                                    window.open(waUrl, '_blank');
-                                }, 300);
+                                setTimeout(() => window.open(waUrl, '_blank'), 400);
                             }
                         }
-                    } else {
-                        throw new Error('Supabase client no inicializado');
                     }
                 } catch (e) {
-                    console.error('❌ Error crítico en changeStatus:', e);
-                    showToast('Error: no se pudo actualizar la cita', 'error');
-                    alert('Error de sincronización: ' + (e.message || 'Error desconocido'));
+                    console.error('❌ Error en el proceso:', e);
+                    showToast('Error al actualizar', 'error');
                 } finally {
                     showLoading(false);
                 }
