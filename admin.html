@@ -615,6 +615,7 @@
 
             const STORAGE_KEY = 'citasOGBeat';
             let currentFilter = 'all';
+            let citasCache = [];
 
             function showLoading(show) {
                 const loader = document.getElementById('loading-overlay');
@@ -686,23 +687,39 @@
             }
 
             async function getCitas(forceRefresh = false) {
+                if (!forceRefresh && Array.isArray(citasCache) && citasCache.length > 0) {
+                    return citasCache;
+                }
+
                 if (ogSupabaseClient) {
                     const { data, error } = await ogSupabaseClient
                         .from('ogbeatproduction')
                         .select('*')
                         .order('id', { ascending: false });
                     
-                    if (!error) {
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-                        if (DEBUG_MODE) console.log('🔄 Citas obtenidas de Supabase:', data.length);
-                        return data;
-                    } else {
-                        console.error('❌ Error Supabase al obtener citas:', error);
+                    if (!error && Array.isArray(data)) {
+                        citasCache = data;
+                        try {
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+                        } catch (e) {
+                            if (DEBUG_MODE) console.warn('⚠️ No se pudo escribir localStorage:', e);
+                        }
+                        if (DEBUG_MODE) console.log('🔄 Citas obtenidas de Supabase:', citasCache.length);
+                        return citasCache;
                     }
+
+                    console.error('❌ Error Supabase al obtener citas:', error);
                 }
-                const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-                if (DEBUG_MODE) console.log('📦 Citas obtenidas de LocalStorage:', localData.length);
-                return localData;
+
+                // Fallback
+                try {
+                    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+                    citasCache = Array.isArray(localData) ? localData : [];
+                } catch (e) {
+                    citasCache = [];
+                }
+                if (DEBUG_MODE) console.log('📦 Citas obtenidas de LocalStorage:', citasCache.length);
+                return citasCache;
             }
 
             async function saveCitaToSupabase(cita) {
@@ -770,6 +787,7 @@
 
             async function refreshData() {
                 if (DEBUG_MODE) console.log('🔄 Ejecutando refresco total de datos...');
+                await getCitas(true);
                 await updateStats();
                 await renderCitas();
             }
@@ -789,7 +807,7 @@
             }
 
             async function updateStats() {
-                const citas = await getCitas();
+                const citas = await getCitas(false);
                 const hoy = new Date().toISOString().split('T')[0];
                 
                 document.getElementById('stat-total').innerText = citas.length;
@@ -810,14 +828,12 @@
             }
 
             async function renderCitas() {
-                // Forzar obtención de datos frescos antes de renderizar
-                const citas = await getCitas(true);
+                const citas = await getCitas(false);
                 const body = document.getElementById('citas-body');
                 const searchInput = document.getElementById('search');
                 const search = searchInput ? searchInput.value.toLowerCase() : '';
                 
                 // IMPORTANTE: Asegurarnos de que el filtro actual se aplique correctamente
-                const selectEstado = document.getElementById('filter-estado');
                 const estadoFiltro = currentFilter || 'all'; 
                 
                 if (DEBUG_MODE) console.log(`🎨 Renderizando con filtro: ${estadoFiltro}`);
@@ -904,92 +920,113 @@
             }
 
             async function changeStatus(id, newStatus) {
-                if (!id) return;
-                
+                if (id === undefined || id === null) return;
+                const idNum = Number(id);
+                const citaId = Number.isFinite(idNum) ? idNum : id;
+
                 showLoading(true);
-                if (DEBUG_MODE) console.log(`🚀 Solicitando cambio a "${newStatus}" para ID: ${id}`);
-                
+                if (DEBUG_MODE) console.log(`🚀 changeStatus id=${id} cast=${citaId} -> ${newStatus}`);
+
                 try {
-                    if (ogSupabaseClient) {
-                        // 1. Obtener datos actuales
-                        const { data: currentData, error: fetchError } = await ogSupabaseClient
-                            .from('ogbeatproduction')
-                            .select('*')
-                            .eq('id', id)
-                            .single();
+                    if (!ogSupabaseClient) throw new Error('Supabase client no inicializado');
 
-                        if (fetchError) throw fetchError;
+                    // 1) Update con confirmación de fila afectada
+                    const { data: updatedRows, error: updateError } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .update({ estado: newStatus })
+                        .eq('id', citaId)
+                        .select('id, estado, nombre, telefono, fecha, hora')
+                        .limit(1);
 
-                        // 2. Actualizar estado REAL en la base de datos
-                        const { error: updateError } = await ogSupabaseClient
-                            .from('ogbeatproduction')
-                            .update({ estado: newStatus })
-                            .eq('id', id);
-                        
-                        if (updateError) throw updateError;
-                        
-                        showToast(`Cita ${newStatus === 'completada' ? 'APROBADA' : 'CANCELADA'}`, 'success');
-                        
-                        // 3. LIMPIEZA TOTAL DE CACHÉ Y RECARGA FORZADA
-                        localStorage.removeItem(STORAGE_KEY); 
-                        
-                        // Forzamos la descarga de datos frescos y el renderizado completo
-                        await getCitas(true); 
-                        await renderCitas(); 
-                        await updateStats();
+                    if (updateError) throw updateError;
+                    if (!updatedRows || updatedRows.length === 0) {
+                        throw new Error('No se actualizó ninguna fila (ID no coincide)');
+                    }
 
-                        // 4. Acciones automáticas (WhatsApp)
-                        if (currentData) {
-                            const [y, m, d] = currentData.fecha.split('-');
-                            const fechaFormateada = `${d}/${m}/${y}`;
-                            let mensaje = '';
-                            
-                            if (newStatus === 'completada') {
-                                mensaje = `¡Hola ${currentData.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${currentData.hora}. 📀 ¡Vamos a crear magia!`;
-                            } else if (newStatus === 'cancelada') {
-                                mensaje = `Hola ${currentData.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
-                            }
+                    const updated = updatedRows[0];
 
-                            if (mensaje) {
-                                const waUrl = `https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
-                                // Delay para asegurar que el usuario vea la desaparición de la tarjeta
-                                setTimeout(() => {
-                                    window.open(waUrl, '_blank');
-                                }, 800);
-                            }
-                        }
+                    // 2) Actualizar cache en memoria (sin depender de refetch)
+                    const idx = citasCache.findIndex(c => String(c.id) === String(updated.id));
+                    if (idx !== -1) {
+                        citasCache[idx] = { ...citasCache[idx], estado: updated.estado };
+                    }
+
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(citasCache));
+                    } catch (e) {
+                        if (DEBUG_MODE) console.warn('⚠️ No se pudo escribir localStorage:', e);
+                    }
+
+                    // 3) Re-render inmediato desde memoria
+                    await updateStats();
+                    await renderCitas();
+
+                    showToast(`Cita ${newStatus === 'completada' ? 'APROBADA' : 'CANCELADA'}`, 'success');
+
+                    // 4) WhatsApp (se abre después para no frenar UI)
+                    const [y, m, d] = String(updated.fecha).split('-');
+                    const fechaFormateada = `${d}/${m}/${y}`;
+                    let mensaje = '';
+
+                    if (newStatus === 'completada') {
+                        mensaje = `¡Hola ${updated.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${updated.hora}. 📀 ¡Vamos a crear magia!`;
+                    } else if (newStatus === 'cancelada') {
+                        mensaje = `Hola ${updated.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
+                    }
+
+                    if (mensaje) {
+                        const waUrl = `https://wa.me/${String(updated.telefono).replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
+                        setTimeout(() => window.open(waUrl, '_blank'), 600);
                     }
                 } catch (e) {
-                    console.error('❌ Error en el proceso:', e);
+                    console.error('❌ changeStatus error:', e);
                     showToast('Error al actualizar', 'error');
+                    alert('No se pudo actualizar la cita. Revisa consola.');
                 } finally {
                     showLoading(false);
                 }
             }
 
             async function deleteCita(id) {
-                if(!id) return;
-                if(confirm('¿Estás seguro de eliminar esta cita permanentemente?')) {
-                    showLoading(true);
-                    try {
-                        if (ogSupabaseClient) {
-                            const { error } = await ogSupabaseClient
-                                .from('ogbeatproduction')
-                                .delete()
-                                .eq('id', id);
-                            
-                            if (error) throw error;
-                            
-                            showToast('Eliminada correctamente', 'success');
-                            localStorage.removeItem(STORAGE_KEY); // Limpiar caché
-                            await refreshData();
-                        }
-                    } catch (e) {
-                        console.error('❌ Error al eliminar:', e);
-                        showToast('Error al eliminar', 'error');
-                    } finally {
-                        showLoading(false);
+                if (id === undefined || id === null) return;
+                const idNum = Number(id);
+                const citaId = Number.isFinite(idNum) ? idNum : id;
+
+                if (!confirm('¿Estás seguro de eliminar esta cita permanentemente?')) return;
+
+                showLoading(true);
+                try {
+                    if (!ogSupabaseClient) throw new Error('Supabase client no inicializado');
+
+                    const { data: deletedRows, error } = await ogSupabaseClient
+                        .from('ogbeatproduction')
+                        .delete()
+                        .eq('id', citaId)
+                        .select('id')
+                        .limit(1);
+
+                    if (error) throw error;
+                    if (!deletedRows || deletedRows.length === 0) {
+                        throw new Error('No se eliminó ninguna fila (ID no coincide)');
                     }
+
+                    const deletedId = deletedRows[0].id;
+                    citasCache = citasCache.filter(c => String(c.id) !== String(deletedId));
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(citasCache));
+                    } catch (e) {
+                        if (DEBUG_MODE) console.warn('⚠️ No se pudo escribir localStorage:', e);
+                    }
+
+                    await updateStats();
+                    await renderCitas();
+                    showToast('Eliminada correctamente', 'success');
+                } catch (e) {
+                    console.error('❌ deleteCita error:', e);
+                    showToast('Error al eliminar', 'error');
+                    alert('No se pudo eliminar la cita. Revisa consola.');
+                } finally {
+                    showLoading(false);
                 }
             }
 
