@@ -842,8 +842,10 @@
                     if (estadoFiltro === 'all') {
                         matchEstado = true;
                     } else {
-                        // Mapeo de estados para coincidir con el filtro
-                        const estadoNormalizado = estado === 'completada' ? 'completada' : (estado === 'cancelada' ? 'cancelada' : 'pendiente');
+                        // Normalización total para asegurar que coincida con el filtro del sidebar/select
+                        const estadoNormalizado = (estado === 'completada' || estado === 'aprobada') ? 'completada' : 
+                                                (estado === 'cancelada' || estado === 'rechazada') ? 'cancelada' : 'pendiente';
+                        
                         matchEstado = (estadoNormalizado === estadoFiltro);
                     }
 
