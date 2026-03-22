@@ -1,3 +1,16 @@
+/* 
+ * =========================================================================
+ * OG BEAT PRODUCTION - OFFICIAL SCRIPT
+ * =========================================================================
+ * © 2026 OG BEAT PRODUCTION. Todos los derechos reservados.
+ * 
+ * PROPIEDAD INTELECTUAL Y DERECHOS DE AUTOR:
+ * Queda estrictamente prohibida la copia, reproducción, distribución, 
+ * modificación o uso de este código sin el consentimiento expreso y 
+ * por escrito de OG BEAT.
+ * =========================================================================
+ */
+
 /* ==========================================
    SCRIPT PRINCIPAL - OG BEAT PRODUCTION
    ========================================== */
