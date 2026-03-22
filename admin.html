@@ -818,7 +818,7 @@
                 
                 // IMPORTANTE: Asegurarnos de que el filtro actual se aplique correctamente
                 const selectEstado = document.getElementById('filter-estado');
-                const estadoFiltro = selectEstado ? selectEstado.value : currentFilter; 
+                const estadoFiltro = currentFilter || 'all'; 
                 
                 if (DEBUG_MODE) console.log(`🎨 Renderizando con filtro: ${estadoFiltro}`);
 
@@ -833,8 +833,9 @@
 
                 filtered = filtered.filter(c => {
                     const nombre = (c.nombre || '').toLowerCase();
-                    const tel = c.telefono || '';
-                    const estado = (c.estado || 'pendiente').toLowerCase();
+                    const tel = (c.telefono || '').toLowerCase();
+                    // Normalización estricta del estado de la cita desde la DB
+                    const estadoReal = (c.estado || 'pendiente').toLowerCase().trim();
                     
                     const matchSearch = nombre.includes(search) || tel.includes(search);
                     
@@ -843,11 +844,14 @@
                     if (estadoFiltro === 'all') {
                         matchEstado = true;
                     } else {
-                        // Normalización total para asegurar que coincida con el filtro del sidebar/select
-                        const estadoNormalizado = (estado === 'completada' || estado === 'aprobada') ? 'completada' : 
-                                                (estado === 'cancelada' || estado === 'rechazada') ? 'cancelada' : 'pendiente';
-                        
-                        matchEstado = (estadoNormalizado === estadoFiltro);
+                        // Mapeo exacto: 'pendiente' -> 'pendiente', 'completada' -> 'completada' (o aprobada), 'cancelada' -> 'cancelada' (o rechazada)
+                        if (estadoFiltro === 'pendiente') {
+                            matchEstado = (estadoReal === 'pendiente');
+                        } else if (estadoFiltro === 'completada') {
+                            matchEstado = (estadoReal === 'completada' || estadoReal === 'aprobada');
+                        } else if (estadoFiltro === 'cancelada') {
+                            matchEstado = (estadoReal === 'cancelada' || estadoReal === 'rechazada');
+                        }
                     }
 
                     const matchDesde = !desde || c.fecha >= desde;
@@ -856,9 +860,14 @@
                     return matchSearch && matchEstado && matchDesde && matchHasta;
                 });
 
-                if (DEBUG_MODE) console.log(`📊 Citas filtradas a mostrar: ${filtered.length}`);
+                if (DEBUG_MODE) console.log(`📊 Citas filtradas a mostrar (${estadoFiltro}): ${filtered.length}`);
 
                 body.innerHTML = '';
+                if (filtered.length === 0) {
+                    body.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-muted)">No se encontraron citas en esta categoría</td></tr>`;
+                    return;
+                }
+
                 filtered.forEach(c => {
                     const row = document.createElement('tr');
                     const [y, m, d] = c.fecha.split('-');
