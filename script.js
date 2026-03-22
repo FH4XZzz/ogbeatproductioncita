@@ -1699,6 +1699,55 @@ if (DEBUG_MODE) {
 // 11. GESTIÓN DE IMÁGENES DE SERVICIOS
 // ==========================================
 
+/**
+ * Analiza las tarjetas de servicios e inyecta fotos correspondientes automáticamente
+ */
+function initServiceImages() {
+    const cards = document.querySelectorAll('.servicio-card');
+    
+    // URLs de imágenes profesionales (Unsplash) para cada categoría
+    const imagenes = {
+        'grabacion': 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?q=80&w=600&auto=format&fit=crop', // Micrófono de estudio
+        'mezcla': 'https://images.unsplash.com/photo-1598653222000-6b7b7a552625?q=80&w=600&auto=format&fit=crop',    // Consola de mezcla
+        'beats': 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?q=80&w=600&auto=format&fit=crop',     // Producción/Synth
+        'default': 'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?q=80&w=600&auto=format&fit=crop'    // Estudio general
+    };
+
+    cards.forEach(card => {
+        // Evitar duplicar si ya tiene imagen
+        if (card.querySelector('.servicio-img-wrapper')) return;
+
+        // Analizar el título para determinar la categoría
+        const titulo = card.querySelector('h3');
+        const texto = titulo ? titulo.textContent.toLowerCase() : '';
+        let imgUrl = imagenes.default;
+
+        if (texto.includes('grabación') || texto.includes('rec') || texto.includes('voz')) {
+            imgUrl = imagenes.grabacion;
+        } else if (texto.includes('mezcla') || texto.includes('master') || texto.includes('mix')) {
+            imgUrl = imagenes.mezcla;
+        } else if (texto.includes('beat') || texto.includes('prod') || texto.includes('instrumental')) {
+            imgUrl = imagenes.beats;
+        }
+
+        // Crear contenedor de imagen con estilos integrados
+        const imgWrapper = document.createElement('div');
+        imgWrapper.className = 'servicio-img-wrapper';
+        imgWrapper.style.cssText = 'width: 100%; height: 160px; overflow: hidden; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);';
+        
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;';
+        
+        // Efecto Zoom al pasar el mouse
+        card.addEventListener('mouseenter', () => img.style.transform = 'scale(1.1)');
+        card.addEventListener('mouseleave', () => img.style.transform = 'scale(1.0)');
+
+        imgWrapper.appendChild(img);
+        card.insertBefore(imgWrapper, card.firstChild);
+    });
+}
+
 // ==========================================
 // 13. FUNCIONALIDAD DEL NAVBAR (SCROLL & LOGO)
 // ==========================================
