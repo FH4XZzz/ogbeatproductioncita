@@ -698,7 +698,7 @@
                         .order('id', { ascending: false });
                     
                     if (!error && Array.isArray(data)) {
-                        // Mapear nombres de columnas de la DB a nombres internos del script
+                        // Mapeo final basado en diagnóstico real de consola
                         citasCache = data.map(r => ({
                             id: r.id,
                             nombre: r.nombre,
@@ -1034,7 +1034,7 @@
                 try {
                     if (!ogSupabaseClient) throw new Error('Supabase client no inicializado');
 
-                    // 1) Update con confirmación de fila afectada
+                    // 1) Update con confirmación de fila afectada - USANDO NOMBRES TÉCNICOS CONFIRMADOS
                     let { data: updatedRows, error: updateError } = await ogSupabaseClient
                         .from('ogbeatproduction')
                         .update({ estado: newStatus })
@@ -1042,8 +1042,7 @@
                         .select('id, estado, nombre, telefono, fecha, hora')
                         .limit(1);
 
-                    // Fallback: si el ID no coincide (por ejemplo viene de localStorage),
-                    // intentamos resolver el id real en DB por telefono+fecha+hora.
+                    // Fallback: si el ID no coincide, intentamos resolver el id real en DB
                     if (!updateError && (!updatedRows || updatedRows.length === 0)) {
                         const local = citasCache.find(c => String(c.id) === String(id));
                         if (local) {
