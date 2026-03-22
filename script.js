@@ -772,9 +772,11 @@ function configurarDisponibilidadFechas() {
             
             onOpen: function(selectedDates, dateStr, instance) {
                 // Forzar que el teclado no aparezca en móviles
-                instance.input.blur();
-                instance.input.readOnly = true;
-                instance.input.setAttribute('inputmode', 'none');
+                if (instance && instance.input) {
+                    instance.input.blur();
+                    instance.input.readOnly = true;
+                    instance.input.setAttribute('inputmode', 'none');
+                }
             },
             
             // Deshabilitar días ocupados
