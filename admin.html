@@ -213,6 +213,18 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 2rem;
+            position: sticky;
+            top: 0;
+            background: var(--bg-dark);
+            z-index: 50;
+            padding: 1rem 0;
+            transition: transform 0.4s ease;
+            transform: translate3d(0,0,0);
+            -webkit-transform: translateZ(0);
+        }
+
+        .header.hidden {
+            transform: translateY(-100%);
         }
 
         /* CARDS / STATS */
@@ -659,6 +671,25 @@
                 }
             }
 
+            let lastScrollTop = 0;
+            const header = document.querySelector('.header');
+            
+            window.addEventListener('scroll', () => {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                if (scrollTop > lastScrollTop && scrollTop > 100) {
+                    // Scroll Down
+                    header.classList.add('hidden');
+                    if (DEBUG_MODE) console.log('🔽 Scroll Down: Ocultando header');
+                } else {
+                    // Scroll Up
+                    header.classList.add('hidden'); // Fix temporal si es necesario, pero mejor:
+                    header.classList.remove('hidden');
+                    if (DEBUG_MODE) console.log('🔼 Scroll Up: Mostrando header');
+                }
+                lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+            }, { passive: true });
+
             async function init() {
                 showLoading(true);
                 // Forzar el filtro de 'pendiente' al inicio
@@ -792,45 +823,63 @@
             }
 
             async function changeStatus(id, newStatus) {
+                if (!id) return;
+                
                 showLoading(true);
+                if (DEBUG_MODE) console.log(`🔄 Iniciando cambio de estado para ID: ${id} a ${newStatus}`);
+                
                 try {
                     if (ogSupabaseClient) {
-                        // Obtener datos de la cita antes de actualizar para enviar WhatsApp
-                        const { data: currentData } = await ogSupabaseClient
+                        // 1. Obtener datos actuales de la cita
+                        const { data: currentData, error: fetchError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .select('*')
                             .eq('id', id)
                             .single();
 
-                        const { error } = await ogSupabaseClient
+                        if (fetchError) throw fetchError;
+                        if (DEBUG_MODE) console.log('📦 Datos de cita obtenidos:', currentData);
+
+                        // 2. Actualizar estado en la base de datos
+                        const { error: updateError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .update({ estado: newStatus })
                             .eq('id', id);
                         
-                        if (error) {
-                            console.error('Error Supabase:', error);
-                            showToast('Error al actualizar en la base de datos', 'error');
-                        } else {
-                            showToast(`Cita marcada como ${newStatus}`, 'success');
+                        if (updateError) throw updateError;
+                        
+                        if (DEBUG_MODE) console.log('✅ Estado actualizado en Supabase');
+                        showToast(`Cita marcada como ${newStatus.toUpperCase()}`, 'success');
+                        
+                        // 3. Acciones automáticas (WhatsApp)
+                        if (currentData) {
+                            const [y, m, d] = currentData.fecha.split('-');
+                            const fechaFormateada = `${d}/${m}/${y}`;
+                            let mensaje = '';
                             
-                            // Enviar WhatsApp si se aprueba
-                            if (newStatus === 'completada' && currentData) {
-                                const [y, m, d] = currentData.fecha.split('-');
-                                const fechaFormateada = `${d}/${m}/${y}`;
-                                const mensaje = `¡Hola ${currentData.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${currentData.hora}. 📀 ¡Vamos a crear magia!`;
-                                window.open(`https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`, '_blank');
-                            } else if (newStatus === 'cancelada' && currentData) {
-                                const mensaje = `Hola ${currentData.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
-                                window.open(`https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`, '_blank');
+                            if (newStatus === 'completada') {
+                                mensaje = `¡Hola ${currentData.nombre}! Tu cita en OG BEAT fue aceptada. Te espero en el studio el ${fechaFormateada} a las ${currentData.hora}. 📀 ¡Vamos a crear magia!`;
+                            } else if (newStatus === 'cancelada') {
+                                mensaje = `Hola ${currentData.nombre}, lamentablemente tu solicitud de cita en OG BEAT no pudo ser procesada. Contáctanos para reprogramar.`;
+                            }
+
+                            if (mensaje) {
+                                if (DEBUG_MODE) console.log('📱 Abriendo WhatsApp con mensaje:', mensaje);
+                                const waUrl = `https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
+                                window.open(waUrl, '_blank');
                             }
                         }
+                    } else {
+                        throw new Error('Supabase client no inicializado');
                     }
                 } catch (e) {
-                    console.error('Excepción al cambiar estado:', e);
-                    showToast('Error de conexión', 'error');
+                    console.error('❌ Error crítico en changeStatus:', e);
+                    showToast('Error: no se pudo actualizar la cita', 'error');
+                    alert('Hubo un problema al sincronizar con la base de datos. Por favor revisa la consola.');
+                } finally {
+                    await refreshData();
+                    showLoading(false);
                 }
-                await refreshData();
-                showLoading(false);
             }
 
             function openModal() {
