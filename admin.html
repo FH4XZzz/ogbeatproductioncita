@@ -830,7 +830,7 @@
                 
                 try {
                     if (ogSupabaseClient) {
-                        // 1. Obtener datos actuales de la cita
+                        // 1. Obtener datos actuales de la cita ANTES de actualizar
                         const { data: currentData, error: fetchError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .select('*')
@@ -851,7 +851,10 @@
                         if (DEBUG_MODE) console.log('✅ Estado actualizado en Supabase');
                         showToast(`Cita marcada como ${newStatus.toUpperCase()}`, 'success');
                         
-                        // 3. Acciones automáticas (WhatsApp)
+                        // 3. Forzar refresco de datos locales para que desaparezca de la lista actual
+                        await refreshData();
+
+                        // 4. Acciones automáticas (WhatsApp) - Se abren en nueva pestaña
                         if (currentData) {
                             const [y, m, d] = currentData.fecha.split('-');
                             const fechaFormateada = `${d}/${m}/${y}`;
@@ -875,9 +878,8 @@
                 } catch (e) {
                     console.error('❌ Error crítico en changeStatus:', e);
                     showToast('Error: no se pudo actualizar la cita', 'error');
-                    alert('Hubo un problema al sincronizar con la base de datos. Por favor revisa la consola.');
+                    alert('Hubo un problema al sincronizar con la base de datos: ' + (e.message || 'Error desconocido'));
                 } finally {
-                    await refreshData();
                     showLoading(false);
                 }
             }
