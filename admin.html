@@ -894,19 +894,6 @@
                 }
             }
 
-            async function deleteCita(id) {
-                if(confirm('¿Estás seguro de eliminar esta cita permanentemente?')) {
-                    showLoading(true);
-                    if (ogSupabaseClient) {
-                        const { error } = await ogSupabaseClient.from('ogbeatproduction').delete().eq('id', id);
-                        if (error) showToast('Error al eliminar', 'error');
-                        else showToast('Eliminada correctamente', 'success');
-                    }
-                    await refreshData();
-                    showLoading(false);
-                }
-            }
-
             async function changeStatus(id, newStatus) {
                 if (!id) return;
                 
@@ -925,7 +912,6 @@
                         if (fetchError) throw fetchError;
 
                         // 2. Actualizar estado REAL en la base de datos
-                        // Normalizamos el estado para Supabase (completada o cancelada)
                         const { error: updateError } = await ogSupabaseClient
                             .from('ogbeatproduction')
                             .update({ estado: newStatus })
@@ -938,7 +924,7 @@
                         // 3. LIMPIEZA TOTAL DE CACHÉ Y RE-RENDER INMEDIATO
                         localStorage.removeItem(STORAGE_KEY); 
                         
-                        // Forzamos actualización visual inmediata eliminando del DOM o re-renderizando
+                        // Forzamos actualización visual inmediata
                         await refreshData(); 
 
                         // 4. Acciones automáticas (WhatsApp)
@@ -955,10 +941,10 @@
 
                             if (mensaje) {
                                 const waUrl = `https://wa.me/${currentData.telefono.replace(/\D/g,'')}?text=${encodeURIComponent(mensaje)}`;
-                                // Abrir WhatsApp después de un delay mayor para asegurar que el usuario vea que la cita se movió
+                                // IMPORTANTE: Solo abrimos WhatsApp si el cambio de estado fue exitoso y la UI ya se refrescó
                                 setTimeout(() => {
                                     window.open(waUrl, '_blank');
-                                }, 600);
+                                }, 800);
                             }
                         }
                     }
@@ -967,6 +953,32 @@
                     showToast('Error al actualizar', 'error');
                 } finally {
                     showLoading(false);
+                }
+            }
+
+            async function deleteCita(id) {
+                if(!id) return;
+                if(confirm('¿Estás seguro de eliminar esta cita permanentemente?')) {
+                    showLoading(true);
+                    try {
+                        if (ogSupabaseClient) {
+                            const { error } = await ogSupabaseClient
+                                .from('ogbeatproduction')
+                                .delete()
+                                .eq('id', id);
+                            
+                            if (error) throw error;
+                            
+                            showToast('Eliminada correctamente', 'success');
+                            localStorage.removeItem(STORAGE_KEY); // Limpiar caché
+                            await refreshData();
+                        }
+                    } catch (e) {
+                        console.error('❌ Error al eliminar:', e);
+                        showToast('Error al eliminar', 'error');
+                    } finally {
+                        showLoading(false);
+                    }
                 }
             }
 
