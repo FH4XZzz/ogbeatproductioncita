@@ -457,20 +457,18 @@ function initFormValidation() {
                         timestamp: new Date().toISOString()
                     };
 
-                    // Intento 1: Fetch estándar con fallback a Beacon
+                    // Pabbly Connect Catch Webhook requiere un POST con JSON o Form Data
+                    // Usamos fetch con 'no-cors' pero sin headers complejos para evitar el preflight de CORS
                     fetch(PABBLY_WEBHOOK_URL, {
                         method: 'POST',
                         mode: 'no-cors',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
                         body: JSON.stringify(data)
-                    }).catch(() => {
-                        // Fallback: navigator.sendBeacon (más confiable al cerrar página)
+                    }).catch(err => {
+                        console.warn('Fallback a Beacon...');
                         navigator.sendBeacon(PABBLY_WEBHOOK_URL, JSON.stringify(data));
                     });
                     
-                    if (DEBUG_MODE) console.log('🚀 Intento de envío a Pabbly realizado');
+                    if (DEBUG_MODE) console.log('🚀 Envío a Pabbly intentado (JSON stringified)');
                 }
 
                 // Enviar a Supabase (si está configurado)
