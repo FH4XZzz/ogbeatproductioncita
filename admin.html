@@ -681,9 +681,8 @@
                     // Scroll Down
                     header.classList.add('hidden');
                     if (DEBUG_MODE) console.log('🔽 Scroll Down: Ocultando header');
-                } else {
+                } else if (scrollTop < lastScrollTop) {
                     // Scroll Up
-                    header.classList.add('hidden'); // Fix temporal si es necesario, pero mejor:
                     header.classList.remove('hidden');
                     if (DEBUG_MODE) console.log('🔼 Scroll Up: Mostrando header');
                 }
